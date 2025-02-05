@@ -119,15 +119,18 @@ appBar: AppBar(
                 addItem(addName.text, addRecipe.text, addImage.text, addCategory.text, addPrice.text);
 
               }
-            }, child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 15,horizontal: 150),
-              child: Text("Add",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white
-              ),
-              ),
+            }, child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Add",
+                style: TextStyle(
+
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  //color: Colors.white
+                ),
+                ),
+              ],
             ),
 
 

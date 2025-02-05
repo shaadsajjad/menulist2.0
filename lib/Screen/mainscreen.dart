@@ -1,11 +1,15 @@
 import 'dart:ui';
 
-import 'package:bucketleaf/additem.dart';
-import 'package:bucketleaf/setting_page.dart';
+import 'package:bucketleaf/Screen/additemScreen.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:bucketleaf/display.dart';
+import 'package:bucketleaf/Screen/displayScreen.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../Provider/provider.dart';
 
 class Mainscreen extends StatefulWidget {
   const Mainscreen({super.key});
@@ -35,12 +39,25 @@ class _MainscreenState extends State<Mainscreen> {
   bool searche = false,see=false;
 
   bool isLoading = false;
+  Future<void>setMode({required bool value}) async{
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('Mode', value);
+
+  }
+  getMode() async{
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? value= prefs.getBool('Mode');
+
+
+  }
   @override
   void initState() {
+   // var providers=Provider.of<Providers>(context);
     // TODO: implement initState
     super.initState();
     setState(() {
       getdata();
+     // providers.updateTheme(data:getMode());
     });
   }
   Widget showList(menuliste){
@@ -77,6 +94,7 @@ class _MainscreenState extends State<Mainscreen> {
   }
   @override
   Widget build(BuildContext context) {
+    var providers=Provider.of<Providers>(context);
     return Scaffold(
       floatingActionButton: FloatingActionButton(
           onPressed: () {
@@ -141,9 +159,32 @@ class _MainscreenState extends State<Mainscreen> {
             padding: const EdgeInsets.all(8.0),
             child: InkWell(
                 onTap: (){
-                  Navigator.push(context, MaterialPageRoute(builder: (context){
-                    return SettingPage();
-                  }));
+                 showModalBottomSheet(context: context, builder: (context){
+                   return Padding(
+                     padding: const EdgeInsets.all(20.0),
+                     child: Container(
+                       height: 60,
+                       child: Row(
+                         children: [
+
+                           Text("Mode",
+                             style: TextStyle(
+                                 fontSize: 28
+                             ),),
+                           SizedBox(width: 10),
+                           Switch(value: providers.isChanged, onChanged: (value){
+                             providers.updateTheme(data: value);
+                             setMode(value: value);
+
+                             //value=!light;
+
+                           })
+                         ],
+                       ),
+                     ),
+                   );
+                 });
+
                 },
                 child: Icon(Icons.settings)),
           )
