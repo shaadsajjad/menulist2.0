@@ -1,9 +1,5 @@
-import 'dart:ui';
-
 import 'package:bucketleaf/Screen/additemScreen.dart';
-
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:bucketleaf/Screen/displayScreen.dart';
 import 'package:provider/provider.dart';
@@ -20,190 +16,181 @@ class Mainscreen extends StatefulWidget {
 
 class _MainscreenState extends State<Mainscreen> {
   TextEditingController search = TextEditingController();
-  List<dynamic> menulist = [],searchlist=[];
+  List<MapEntry<String, dynamic>> menulist = [];
+  List<MapEntry<String, dynamic>> searchlist = [];
+
+  bool searche = false, see = false;
+  bool isLoading = false;
+
   Future<void> getdata() async {
-    isLoading = true;
+    setState(() => isLoading = true);
     try {
       Response response = await Dio().get(
           'https://bucketleaf-eb7e8-default-rtdb.firebaseio.com/bucketleaf.json');
-      setState(() {
-        menulist = response.data;
-      });
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        setState(() {
+          menulist = data.entries.toList();
+        });
+      } else {
+        print("Unexpected data format: ${data.runtimeType}");
+      }
     } catch (e) {
-      print(e);
+      print("Fetch error: $e");
+    } finally {
+      setState(() => isLoading = false);
     }
-    isLoading = false;
-    print(menulist);
   }
 
-  bool searche = false,see=false;
-
-  bool isLoading = false;
-  Future<void>setMode({required bool value}) async{
+  Future<void> setMode({required bool value}) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('Mode', value);
-
   }
-  getMode() async{
+
+  getMode() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool? value= prefs.getBool('Mode');
-
-
+    bool? value = prefs.getBool('Mode');
   }
+
   @override
   void initState() {
-   // var providers=Provider.of<Providers>(context);
-    // TODO: implement initState
     super.initState();
-    setState(() {
-      getdata();
-     // providers.updateTheme(data:getMode());
-    });
+    getdata();
   }
-  Widget showList(menuliste){
-    if(menuliste.isEmpty) {
+
+  Widget showList(List<MapEntry<String, dynamic>> menuliste) {
+    if (menuliste.isEmpty) {
       return Center(child: Text("No related item"));
-    }
-    else {
-  return ListView.builder(
-      itemCount: menuliste.length,
-      itemBuilder: (BuildContext context, int index) {
-        return (menuliste[index] is Map)
-            ? ListTile(
-          onTap: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) {
-                  return Display(
-                      menulist: menuliste,
-                      index: index,
-                      getData: getdata);
-                }));
-          },
-          leading: CircleAvatar(
-            backgroundImage:
-            NetworkImage(menuliste[index]?["image"] ?? ""),
-          ),
-          title: Text(menuliste[index]?["name"] ?? ""),
-          subtitle: Text(menuliste[index]?["category"] ?? ""),
-          trailing: Text(
-              "\$ ${menuliste[index]?["price"].toString() ?? ""}"),
-        )
-            : SizedBox();
-      });
-  }
-  }
-  @override
-  Widget build(BuildContext context) {
-    var providers=Provider.of<Providers>(context);
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
+    } else {
+      return ListView.builder(
+        itemCount: menuliste.length,
+        itemBuilder: (BuildContext context, int index) {
+          final item = menuliste[index].value;
+          return ListTile(
+            onTap: () {
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => Additem(index: menulist.length)));
-          },
-          child: Icon(Icons.add)),
-      appBar: searche?
-      AppBar(
-        leading: InkWell
-          (
-          onTap: (){
-            see=false;
-            searche=false;
-            setState(() {
+                  builder: (context) => Display(
+                    menulist: menuliste,
+                    index: index,
+                    getData: getdata,
+                  ),
+                ),
+              );
+            },
+            leading: CircleAvatar(
+              backgroundImage: NetworkImage(item["image"] ?? ""),
+            ),
+            title: Text(item["name"] ?? ""),
+            subtitle: Text(item["category"] ?? ""),
+            trailing: Text("\$ ${item["price"].toString()}"),
+          );
+        },
+      );
+    }
+  }
 
-            });
+  @override
+  Widget build(BuildContext context) {
+    var providers = Provider.of<Providers>(context);
+
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Additem(index: menulist.length)));
+        },
+        child: Icon(Icons.add),
+      ),
+      appBar: searche
+          ? AppBar(
+        leading: InkWell(
+          onTap: () {
+            see = false;
+            searche = false;
+            setState(() {});
           },
-            child: Icon(Icons.arrow_back_outlined)),
+          child: Icon(Icons.arrow_back_outlined),
+        ),
         title: TextField(
           controller: search,
-          decoration: InputDecoration(
-            hintText: "Seach by Category"
-          ),
+          decoration: InputDecoration(hintText: "Search by Category"),
         ),
         actions: [
-          ElevatedButton(onPressed: (){
-            if(search.text.isNotEmpty) {
-            setState(() {
-
-
-              print("success $searchlist");
-              searchlist=menulist.where((element)=>element?["category"]==search.text).toList();
-             print("success $searchlist");
-              see=true;
-              search.text="";
-            });
-            }
-
-
-          }, child: Text("Search"))
+          ElevatedButton(
+              onPressed: () {
+                if (search.text.isNotEmpty) {
+                  setState(() {
+                    searchlist = menulist
+                        .where((entry) =>
+                    entry.value["category"] == search.text)
+                        .toList();
+                    see = true;
+                    search.text = "";
+                  });
+                }
+              },
+              child: Text("Search"))
         ],
       )
-      :AppBar(
-           title: Text("Bucket list"),
+          : AppBar(
+        title: Text("Bucket List"),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: InkWell(
-                onTap: () {
-                  setState(() {
-                    searche = true;
-                  });
-
-                },
-                child: Icon(Icons.search)),
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              setState(() {
+                searche = true;
+              });
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: InkWell(
-                onTap: (){
-                 showModalBottomSheet(context: context, builder: (context){
-                   return Padding(
-                     padding: const EdgeInsets.all(20.0),
-                     child: Container(
-                       height: 60,
-                       child: Row(
-                         children: [
-
-                           Text("Mode",
-                             style: TextStyle(
-                                 fontSize: 28
-                             ),),
-                           SizedBox(width: 10),
-                           Switch(value: providers.isChanged, onChanged: (value){
-                             providers.updateTheme(data: value);
-                             setMode(value: value);
-
-                             //value=!light;
-
-                           })
-                         ],
-                       ),
-                     ),
-                   );
-                 });
-
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Container(
+                      height: 60,
+                      child: Row(
+                        children: [
+                          Text(
+                            "Mode",
+                            style: TextStyle(fontSize: 28),
+                          ),
+                          SizedBox(width: 10),
+                          Switch(
+                            value: providers.isChanged,
+                            onChanged: (value) {
+                              providers.updateTheme(data: value);
+                              setMode(value: value);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
-                child: Icon(Icons.settings)),
+              );
+            },
           )
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          getdata();
-        },
+        onRefresh: () async => getdata(),
         child: isLoading
-            ? Center(
-                child: CircularProgressIndicator(
-                  color: Colors.blue,
-                ),
-              )
-            : see?showList(searchlist):showList(menulist)
-        // ],
+            ? Center(child: CircularProgressIndicator())
+            : see
+            ? showList(searchlist)
+            : showList(menulist),
       ),
-      // ),
     );
   }
 }
